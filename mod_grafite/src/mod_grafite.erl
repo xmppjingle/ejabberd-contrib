@@ -119,9 +119,9 @@ encode_metrics(Host, Probe) ->
     [Node | _] = str:tokens(NodeId, <<".">>),
     Data = case Probe of
     {Key, Val} ->
-        encode(gauge, ?GRAFITE_KEY(Node, Host, Probe), Val, 1.0);
+        encode(gauge, ?GRAFITE_KEY(Node, Host, Key), Val, 1.0);
     Key ->
-        encode(gauge, ?GRAFITE_KEY(Node, Host, Probe), 1, 1.0)
+        encode(gauge, ?GRAFITE_KEY(Node, Host, Key), 1, 1.0)
     end,
     ?INFO_MSG("Stats: ~p ~p ~n", [Data, encode(gauge, Key, 1, undefined)]),
     Data.
