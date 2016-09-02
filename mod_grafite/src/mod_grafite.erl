@@ -103,8 +103,8 @@ component_disconnected(Host) ->
 
 periodic_metrics(Host) ->
     push(Host, {cluster_nodes, length(ejabberd_cluster:get_nodes())}),
-    push(Host, {incoming_s2s_number, length(ejabberd_s2s:incoming_s2s_number())}),
-    push(Host, {outgoing_s2s_number, length(ejabberd_s2s:outgoing_s2s_number())}).
+    push(Host, {incoming_s2s_number, ejabberd_s2s:incoming_s2s_number()}),
+    push(Host, {outgoing_s2s_number, ejabberd_s2s:outgoing_s2s_number()}).
 
 %%====================================================================
 %% metrics push handler
