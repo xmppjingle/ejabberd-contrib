@@ -32,9 +32,9 @@
          user_send_packet/4, user_receive_packet/5,
          s2s_send_packet/3, s2s_receive_packet/3,
          remove_user/2, register_user/2, component_connected/1,
-         component_disconnected/1]).
+         component_disconnected/1, periodic_metrics/1]).
 
--record(state, {socket, host, port}).
+-record(state, {socket, host, port, server}).
 
 -define(PROCNAME, ejabberd_mod_grafite).
 -define(GRAFITE_KEY(Node, Host, Probe), "mod_grafite.ejabberd." ++ 
@@ -54,13 +54,14 @@ start(Host, Opts) ->
      StatsDH = gen_mod:get_opt(statsdhost, Opts, fun(X) -> X end, "localhost"),
      {ok, StatsDHost} = getaddrs(StatsDH),
      StatsDPort = gen_mod:get_opt(statsdport, Opts, fun(X) -> X end, 8125),
-     register(?PROCNAME, spawn(?MODULE, udp_loop_start, [#state{host = StatsDHost, port = StatsDPort}])).
+     register(?PROCNAME, spawn(?MODULE, udp_loop_start, [#state{host = StatsDHost, port = StatsDPort, server = Host}])).
 
 stop(Host) ->
     [ejabberd_hooks:delete(Hook, Host, ?MODULE, Hook, 20)
      || Hook <- ?HOOKS],
          [ejabberd_hooks:delete(Hook, Host, ?MODULE, Hook, 20)
-     || Hook <- ?GLOBAL_HOOKS].
+     || Hook <- ?GLOBAL_HOOKS],
+     whereis(?PROCNAME) ! stop.
 
 depends(_Host, _Opts) ->
     [].
@@ -100,6 +101,10 @@ component_connected(Host) ->
 component_disconnected(Host) ->
     push(Host, component_disconnected).
 
+periodic_metrics(Host) ->
+    push(Host, {cluster_nodes, length(ejabberd_cluster:get_nodes())}),
+    push(Host, {incoming_s2s_number, length(ejabberd_s2s:incoming_s2s_number())}),
+    push(Host, {outgoing_s2s_number, length(ejabberd_s2s:outgoing_s2s_number())}).
 
 %%====================================================================
 %% metrics push handler
@@ -148,13 +153,19 @@ udp_loop_start(#state{}=S) ->
       ?INFO_MSG("Could not start UDP Socket [~p]~n", [LocalPort])
   end.
 
-udp_loop(#state{} = S) ->
+udp_loop(#state{server = Host} = S) ->
   receive 
     {send, Packet} ->        
       send_udp(Packet, S),
       udp_loop(S);
+    stop ->
+      ok;
     _ ->
       udp_loop(S)
+  after
+    60000 ->
+      periodic_metrics(Host),
+      udp_loop(S)            
   end.
 
 send_udp(Payload, #state{socket = Socket, host = Host, port = Port} = State) ->
