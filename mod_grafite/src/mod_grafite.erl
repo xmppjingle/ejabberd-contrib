@@ -32,7 +32,7 @@
          user_send_packet/4, user_receive_packet/5,
          s2s_send_packet/3, s2s_receive_packet/3,
          remove_user/2, register_user/2, component_connected/1,
-         component_disconnected/1]).
+         component_disconnected/1, periodic_metrics/1]).
 
 -record(state, {socket, host, port, server}).
 
