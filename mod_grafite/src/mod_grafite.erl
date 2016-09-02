@@ -164,7 +164,8 @@ udp_loop(#state{server = Host} = S) ->
       udp_loop(S)
   after
     60000 ->
-      periodic_metrics(Host)
+      periodic_metrics(Host),
+      udp_loop(S)            
   end.
 
 send_udp(Payload, #state{socket = Socket, host = Host, port = Port} = State) ->
