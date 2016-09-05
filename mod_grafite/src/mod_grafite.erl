@@ -112,6 +112,7 @@ component_disconnected(Host) ->
     push(Host, component_disconnected).
 
 periodic_metrics(Host) ->
+    ?INFO_MSG("Sending Periodic Metrics... [~p]~n", [Host]),
     push(Host, {cluster_nodes, length(ejabberd_cluster:get_nodes())}),
     push(Host, {incoming_s2s_number, ejabberd_s2s:incoming_s2s_number()}),
     push(Host, {outgoing_s2s_number, ejabberd_s2s:outgoing_s2s_number()}),
