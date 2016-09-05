@@ -177,7 +177,7 @@ udp_loop(#state{server = Host} = S) ->
     _ ->
       udp_loop(S)
   after
-    60000 ->
+    20000 ->
       spawn(?MODULE, periodic_metrics, [Host]),
       udp_loop(S)            
   end.
