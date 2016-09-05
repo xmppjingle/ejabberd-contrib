@@ -199,7 +199,7 @@ period_loop(#state{server = Host} = S) ->
     _ ->
       period_loop(S)
   after
-    10000 ->
+    60000 ->
       spawn(?MODULE, periodic_metrics, [Host]),
       period_loop(S)            
   end.
