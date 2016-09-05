@@ -166,7 +166,6 @@ udp_loop_start(#state{}=S) ->
   end.
 
 udp_loop(#state{server = Host} = S) ->
-  ?INFO_MSG("UDP Stats Loop: [~p]~n", [Host]),
   receive 
     {send, Packet} ->        
       send_udp(Packet, S),
