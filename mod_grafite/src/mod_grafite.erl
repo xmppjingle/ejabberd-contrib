@@ -54,7 +54,11 @@ start(Host, Opts) ->
      StatsDH = gen_mod:get_opt(statsdhost, Opts, fun(X) -> X end, "localhost"),
      {ok, StatsDHost} = getaddrs(StatsDH),
      StatsDPort = gen_mod:get_opt(statsdport, Opts, fun(X) -> X end, 8125),
-     register(?PROCNAME, spawn(?MODULE, udp_loop_start, [#state{host = StatsDHost, port = StatsDPort, server = Host}])),
+     case whereis(?PROCNAME) of
+        undefined ->
+          register(?PROCNAME, spawn(?MODULE, udp_loop_start, [#state{host = StatsDHost, port = StatsDPort, server = Host}]));
+        _ -> ok
+     end,
      ?INFO_MSG("mod_grafite Started on [~p].~n", [Host]).
 
 stop(Host) ->
@@ -161,6 +165,7 @@ udp_loop_start(#state{}=S) ->
   end.
 
 udp_loop(#state{server = Host} = S) ->
+  ?INFO_MSG("UDP Stats Loop: [~p]~n", [Host]),
   receive 
     {send, Packet} ->        
       send_udp(Packet, S),
