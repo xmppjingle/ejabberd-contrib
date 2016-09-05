@@ -58,10 +58,15 @@ start(Host, Opts) ->
 
 stop(Host) ->
     [ejabberd_hooks:delete(Hook, Host, ?MODULE, Hook, 20)
-     || Hook <- ?HOOKS],
-         [ejabberd_hooks:delete(Hook, Host, ?MODULE, Hook, 20)
-     || Hook <- ?GLOBAL_HOOKS],
-     whereis(?PROCNAME) ! stop.
+      || Hook <- ?HOOKS],
+           [ejabberd_hooks:delete(Hook, Host, ?MODULE, Hook, 20)
+      || Hook <- ?GLOBAL_HOOKS],
+      Proc = whereis(?PROCNAME),
+      case erlang:is_pid(Proc) andalso erlang:is_process_alive(Proc) of
+        true ->
+           Proc ! stop;
+        _ -> ok
+      end.
 
 depends(_Host, _Opts) ->
     [].
