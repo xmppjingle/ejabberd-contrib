@@ -104,7 +104,8 @@ component_disconnected(Host) ->
 periodic_metrics(Host) ->
     push(Host, {cluster_nodes, length(ejabberd_cluster:get_nodes())}),
     push(Host, {incoming_s2s_number, ejabberd_s2s:incoming_s2s_number()}),
-    push(Host, {outgoing_s2s_number, ejabberd_s2s:outgoing_s2s_number()}).
+    push(Host, {outgoing_s2s_number, ejabberd_s2s:outgoing_s2s_number()}),
+    lists:foreach(fun({H, C}) -> push(H, {routes, C}) end, list_route_count()).
 
 %%====================================================================
 %% metrics push handler
@@ -201,6 +202,9 @@ random(N) ->
 
 timestamp() ->
     os:timestamp().
+
+list_route_count() ->
+  lists:map(fun(X) -> {X, length(mnesia:dirty_read(route, X))} end, ejabberd_router:dirty_get_all_routes()).
 
 %%====================================================================
 %% mod Options
