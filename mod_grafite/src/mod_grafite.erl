@@ -54,7 +54,8 @@ start(Host, Opts) ->
      StatsDH = gen_mod:get_opt(statsdhost, Opts, fun(X) -> X end, "localhost"),
      {ok, StatsDHost} = getaddrs(StatsDH),
      StatsDPort = gen_mod:get_opt(statsdport, Opts, fun(X) -> X end, 8125),
-     register(?PROCNAME, spawn(?MODULE, udp_loop_start, [#state{host = StatsDHost, port = StatsDPort, server = Host}])).
+     register(?PROCNAME, spawn(?MODULE, udp_loop_start, [#state{host = StatsDHost, port = StatsDPort, server = Host}])),
+     ?INFO_MSG("mod_grafite Started on [~p].~n", [Host]).
 
 stop(Host) ->
     [ejabberd_hooks:delete(Hook, Host, ?MODULE, Hook, 20)
@@ -165,7 +166,7 @@ udp_loop(#state{server = Host} = S) ->
       send_udp(Packet, S),
       udp_loop(S);
     stop ->
-      ?INFO_MSG("Stopping mod_grafite periodic_metrics...", []),
+      ?INFO_MSG("Stopping mod_grafite periodic_metrics...~n", []),
       ok;
     _ ->
       udp_loop(S)
