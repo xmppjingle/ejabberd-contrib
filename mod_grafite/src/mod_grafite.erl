@@ -58,7 +58,7 @@ start(Host, Opts) ->
    StatsDPort = gen_mod:get_opt(statsdport, Opts, fun(X) -> X end, 8125),
    Args = [#state{host = StatsDHost, port = StatsDPort, server = Host}],
    start_loop(?PROCNAME, ?MODULE, udp_loop_start, Args),
-   start_loop(?PROCNAME, ?MODULE, period_loop, Args),
+   start_loop(?PROCNAME_PERIOD, ?MODULE, period_loop, Args),
    ?INFO_MSG("mod_grafite Started on [~p].~n", [Host]).
 
 stop(Host) ->
