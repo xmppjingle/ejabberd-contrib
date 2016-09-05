@@ -182,7 +182,7 @@ udp_loop(#state{} = S) ->
       send_udp(Packet, S),
       udp_loop(S);
     stop ->
-      ?INFO_MSG("Stopping mod_grafite periodic_metrics...~n", []),
+      ?INFO_MSG("Stopping mod_grafite UDP Loop...~n", []),
       ok;
     _ ->
       udp_loop(S)
