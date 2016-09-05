@@ -165,6 +165,7 @@ udp_loop(#state{server = Host} = S) ->
       send_udp(Packet, S),
       udp_loop(S);
     stop ->
+      ?INFO_MSG("Stopping mod_grafite periodic_metrics..."),
       ok;
     _ ->
       udp_loop(S)
