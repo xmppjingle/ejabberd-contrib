@@ -25,7 +25,7 @@
 -define(GLOBAL_HOOKS, [component_connected, component_disconnected]).
 
 -export([start/2, stop/1, mod_opt_type/1,
-   depends/2, udp_loop_start/1, push/2]).
+   depends/2, udp_loop_start/1, period_loop/1, push/2]).
 
 -export([offline_message_hook/3,
          sm_register_connection_hook/3, sm_remove_connection_hook/3,
@@ -37,6 +37,8 @@
 -record(state, {socket, host, port, server}).
 
 -define(PROCNAME, ejabberd_mod_grafite).
+-define(PROCNAME_PERIOD, ejabberd_mod_grafite_period).
+
 -define(GRAFITE_KEY(Node, Host, Probe), "mod_grafite.ejabberd." ++ 
   erlang:binary_to_list(Node) ++ "_" ++ 
   erlang:binary_to_list(Host) ++ "." ++ 
@@ -47,31 +49,40 @@
 %%====================================================================
 
 start(Host, Opts) ->
-    [ejabberd_hooks:add(Hook, Host, ?MODULE, Hook, 20)
-     || Hook <- ?HOOKS],
-    [ejabberd_hooks:add(Hook, ?MODULE, Hook, 18)
-     || Hook <- ?GLOBAL_HOOKS],
-     StatsDH = gen_mod:get_opt(statsdhost, Opts, fun(X) -> X end, "localhost"),
-     {ok, StatsDHost} = getaddrs(StatsDH),
-     StatsDPort = gen_mod:get_opt(statsdport, Opts, fun(X) -> X end, 8125),
-     case whereis(?PROCNAME) of
-        undefined ->
-          register(?PROCNAME, spawn(?MODULE, udp_loop_start, [#state{host = StatsDHost, port = StatsDPort, server = Host}]));
-        _ -> ok
-     end,
-     ?INFO_MSG("mod_grafite Started on [~p].~n", [Host]).
+  [ejabberd_hooks:add(Hook, Host, ?MODULE, Hook, 20)
+   || Hook <- ?HOOKS],
+  [ejabberd_hooks:add(Hook, ?MODULE, Hook, 18)
+   || Hook <- ?GLOBAL_HOOKS],
+   StatsDH = gen_mod:get_opt(statsdhost, Opts, fun(X) -> X end, "localhost"),
+   {ok, StatsDHost} = getaddrs(StatsDH),
+   StatsDPort = gen_mod:get_opt(statsdport, Opts, fun(X) -> X end, 8125),
+   Args = [#state{host = StatsDHost, port = StatsDPort, server = Host}],
+   start_loop(?PROCNAME, ?MODULE, udp_loop_start, Args),
+   start_loop(?PROCNAME, ?MODULE, period_loop, Args),
+   ?INFO_MSG("mod_grafite Started on [~p].~n", [Host]).
 
 stop(Host) ->
     [ejabberd_hooks:delete(Hook, Host, ?MODULE, Hook, 20)
       || Hook <- ?HOOKS],
            [ejabberd_hooks:delete(Hook, Host, ?MODULE, Hook, 20)
       || Hook <- ?GLOBAL_HOOKS],
-      Proc = whereis(?PROCNAME),
-      case erlang:is_pid(Proc) andalso erlang:is_process_alive(Proc) of
-        true ->
-           Proc ! stop;
-        _ -> ok
-      end.
+    stop_loop(?PROCNAME),
+    stop_loop(?PROCNAME_PERIOD).
+
+start_loop(Name, Module, Function, Args) ->
+ case whereis(Name) of
+    undefined ->
+      register(Name, spawn(Module, Function, Args));
+    _ -> ok
+ end.
+
+stop_loop(Name) ->
+  Proc = whereis(Name),
+  case erlang:is_pid(Proc) andalso erlang:is_process_alive(Proc) of
+    true ->
+       Proc ! stop;
+    _ -> ok
+  end.
 
 depends(_Host, _Opts) ->
     [].
@@ -165,7 +176,7 @@ udp_loop_start(#state{}=S) ->
       ?INFO_MSG("Could not start UDP Socket [~p]~n", [LocalPort])
   end.
 
-udp_loop(#state{server = Host} = S) ->
+udp_loop(#state{} = S) ->
   receive 
     {send, Packet} ->        
       send_udp(Packet, S),
@@ -176,9 +187,21 @@ udp_loop(#state{server = Host} = S) ->
     _ ->
       udp_loop(S)
   after
-    20000 ->
-      spawn(?MODULE, periodic_metrics, [Host]),
+    10000 ->
       udp_loop(S)            
+  end.
+
+period_loop(#state{server = Host} = S) ->
+  receive 
+    stop ->
+      ?INFO_MSG("Stopping mod_grafite periodic_metrics...~n", []),
+      ok;
+    _ ->
+      period_loop(S)
+  after
+    10000 ->
+      spawn(?MODULE, periodic_metrics, [Host]),
+      period_loop(S)            
   end.
 
 send_udp(Payload, #state{socket = Socket, host = Host, port = Port} = State) ->
