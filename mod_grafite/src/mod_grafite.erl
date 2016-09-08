@@ -32,7 +32,8 @@
          user_send_packet/4, user_receive_packet/5,
          s2s_send_packet/3, s2s_receive_packet/3,
          remove_user/2, register_user/2, component_connected/1,
-         component_disconnected/1, periodic_metrics/1]).
+         component_disconnected/1, periodic_metrics/1, list_route_count/0,
+         list_user_count/0]).
 
 -record(state, {socket, host, port, server}).
 
@@ -127,7 +128,8 @@ periodic_metrics(Host) ->
     push(Host, {cluster_nodes, length(ejabberd_cluster:get_nodes())}),
     push(Host, {incoming_s2s_number, ejabberd_s2s:incoming_s2s_number()}),
     push(Host, {outgoing_s2s_number, ejabberd_s2s:outgoing_s2s_number()}),
-    lists:foreach(fun({H, C}) -> push(H, {routes, C}) end, list_route_count()).
+    lists:foreach(fun({H, C}) -> push(H, {routes, C}) end, list_route_count()),
+    lists:foreach(fun({H, C}) -> push(H, {resources, C}) end, list_user_count()).
 
 %%====================================================================
 %% metrics push handler
@@ -240,6 +242,10 @@ timestamp() ->
 
 list_route_count() ->
   lists:map(fun(X) -> {X, length(mnesia:dirty_read(route, X))} end, ejabberd_router:dirty_get_all_routes()).
+
+list_user_count() ->
+  DD = lists:foldl(fun({N,D,R}, Dict) -> dict:append(<<N/binary, <<"@">>/binary , D/binary>>, R, Dict) end, dict:new(), ejabberd_sm:dirty_get_sessions_list()),
+  lists:map(fun(B) -> {B, length(dict:fetch(B, DD))} end, dict:fetch_keys(DD)).
 
 %%====================================================================
 %% mod Options
