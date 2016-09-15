@@ -244,7 +244,7 @@ list_route_count() ->
   lists:map(fun(X) -> {X, length(mnesia:dirty_read(route, X))} end, ejabberd_router:dirty_get_all_routes()).
 
 list_user_count() ->
-  DD = lists:foldl(fun({N,D,R}, Dict) -> dict:append(<<N/binary, <<"@">>/binary , D/binary>>, R, Dict) end, dict:new(), ejabberd_sm:dirty_get_sessions_list()),
+  DD = lists:foldl(fun({N,D,R}, Dict) -> dict:append(<<N/binary, <<"_at_">>/binary , D/binary>>, R, Dict) end, dict:new(), ejabberd_sm:dirty_get_sessions_list()),
   lists:map(fun(B) -> {B, length(dict:fetch(B, DD))} end, dict:fetch_keys(DD)).
 
 %%====================================================================
